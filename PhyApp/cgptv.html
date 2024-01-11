@@ -1,0 +1,123 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Webcam Viewer</title>
+</head>
+<body>
+
+
+
+    <video id="webcam" width="640" height="480" style="position: absolute; left: 0px; top: 0px;"autoplay></video>
+    <canvas id="output_canvas" width="640" height="480" style="position: absolute; left: 0px; top: 0px;"></canvas>
+
+<p id="p1" style="position: absolute; left: 800px; top: 800px;">TEXT</p>
+<button id="enableWebcam" style="position: absolute; left: 800px; top: 1000px;">Enable Webcam</button> 
+
+<script type="module">
+
+
+import { PoseLandmarker, FilesetResolver, DrawingUtils } from "https://cdn.skypack.dev/@mediapipe/tasks-vision@0.10.0";
+
+document.addEventListener('DOMContentLoaded', () => {
+  const video = document.getElementById('webcam');
+  const enableWebcamButton = document.getElementById('enableWebcam');
+    
+    //const video = document.getElementById('webcam');
+    const canvasElement = document.getElementById('output_canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+    const drawingUtils = new DrawingUtils(canvasCtx);
+
+//   enableWebcamButton.addEventListener('click', () => {
+//     enableWebcam();
+//   });
+function handlePose(results) {
+            if (results.poseLandmarks) {
+                // Extract keypoints for the left hip, knee, and ankle
+                const leftHip = results.poseLandmarks[mediapipe.PoseLandmark.LEFT_HIP];
+                const leftKnee = results.poseLandmarks[mediapipe.PoseLandmark.LEFT_KNEE];
+                const leftAnkle = results.poseLandmarks[mediapipe.PoseLandmark.LEFT_ANKLE];
+
+                if (leftHip && leftKnee && leftAnkle) {
+                    // Calculate the angle using the three keypoints
+                    let angle = calculateAngle(leftHip, leftKnee, leftAnkle);
+                    document.getElementById("p1").innerHTML = angle;
+                }
+            }
+        }
+
+        function calculateAngle(point1, point2, point3) {
+            const radians = Math.atan2(point3.y - point2.y, point3.x - point2.x) -
+                             Math.atan2(point1.y - point2.y, point1.x - point2.x);
+            let angle = radians * (180 / Math.PI);
+
+            // Ensure the angle is between 0 and 360 degrees
+            angle = (angle + 360) % 360;
+
+            return angle;
+        }
+
+
+        const enableWebcam = async () => {
+    const constraints = {
+      video: true
+    };
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      video.srcObject = stream;
+
+    const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm");
+    const poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+        baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+            delegate: "GPU"
+          },
+          runningMode: "VIDEO",
+          numPoses: 1
+        });
+        video.addEventListener('loadeddata', () => {
+            const renderLandmarks = () => {
+          poseLandmarker.detectForVideo(video, performance.now(), (result) => {
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+           // const smoothedLandmarks = smoothLandmarks(result.landmarks, lastLandmarks, 0.2);
+            for (const landmark of result.landmarks) {
+            drawingUtils.drawLandmarks(landmark, {
+            radius: function(data) {
+                return DrawingUtils.lerp(data.from && data.from.z !== undefined ? data.from.z : 0, -0.15, 0.1, 5, 1);
+                }
+            });
+            
+               drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS);
+             handlePose(result);
+            }
+          });
+
+          requestAnimationFrame(renderLandmarks);
+        };
+        renderLandmarks();
+        handlePose(result);
+        });
+
+
+    } catch (error) {
+      console.error('Error accessing webcam:', error);
+    }
+    
+enableWebcam();
+  };
+enableWebcam();
+
+
+
+
+
+
+});
+</script>
+
+</body>
+</html>
