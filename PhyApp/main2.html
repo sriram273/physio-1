@@ -10,13 +10,13 @@
 		<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed&family=Montserrat:wght@300&display=swap" rel="stylesheet">
 		<link rel="stylesheet" href="style.css">
 
-		<title>Sriram Webcam Website</title>
+		<title>Physio Web App</title>
 	</head>
 
 	<body>
 		<div class="grid-container">
 			<div class="grid-item navBar">
-				Sriram Website
+				Physio App
 			</div>
 
 			<div class="grid-item stopwatchRow"> 
@@ -102,7 +102,7 @@
 				}
 	
 				// Format the time as HH:MM:SS:SSS
-				var formattedTime = pad(hours) + ':' + pad(minutes) + ':' + pad(seconds) + ':' + padMilliseconds(milliseconds);
+				var formattedTime = pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
 				
 				// Update the timer display
 				document.getElementById('timer').innerText = formattedTime;

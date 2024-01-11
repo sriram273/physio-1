@@ -44,7 +44,7 @@ body {
     font-family: var(--primary-font);
     font-size: xx-large;
     font-weight: 900;
-    text-align: left;
+    text-align: center;
     padding-left: 16px;
     transition: padding-left var(--transition-property);
     border-radius: 8px;
@@ -54,6 +54,9 @@ body {
     padding-left: 24px;
 }
 
+.stopwatchRow{
+    transition: color var(--transition-property);
+}
 .stopwatchRow:hover{
     color: var(--primary-color);
 }
