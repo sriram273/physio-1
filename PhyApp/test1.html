@@ -1,0 +1,180 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed&family=Montserrat:wght@300&display=swap" rel="stylesheet">
+		<link rel="stylesheet" href="style.css">
+
+		<script src="stopwatchFunction.js"></script>
+    <script type="module" src="index2.js"></script>
+		<title>Physio Web App</title></head>
+<body>
+  <div class="grid-container">
+    <div class="grid-item navBar">
+      Physio App
+    </div>
+
+    <div class="grid-item stopwatchRow"> 
+      <div id="timer">00:00:00</div>
+      <div id="buttonDiv">	
+        <button id="startStopBtn" onclick="startStopTimer()">Start</button>
+        <button id="restartBtn" onclick="restartTimer()">Restart</button>
+      </div>	
+    </div>
+
+    <div class="grid-item angleRow"> 
+      <p id="changetext">angleRow Content</p>
+      <!-- Abov element to change text - Angle -->
+      <p id="updateText">update text here</p>
+
+
+
+    </div>
+
+    <div class="grid-item repRow">
+      <p>repRow Content</p>
+    </div>
+
+    <div class="grid-item videoInput">
+      <p id="content1">videoInput Content</p>
+      <video id="webcam" width="640" height="480"autoplay></video>
+      <canvas id="output_canvas" width="640" height="480" style="position: absolute; left: 0px; top: 0px;"></canvas>
+
+    </div>
+
+    <div class="grid-item buttonRow"> 
+      <div id="buttonDiv">
+        <button id="activateWebcamButton">Activate Webcam</button>
+        <button id="deactivateWebcamButton">De Activate Webcam</button>
+      </div>
+    </div>
+
+  </div>
+<button id="enableWebcam" >Enable Webcam</button> 
+
+
+<script type="module">
+
+
+import { PoseLandmarker, FilesetResolver, DrawingUtils } from "https://cdn.skypack.dev/@mediapipe/tasks-vision@0.10.0";
+
+document.addEventListener('DOMContentLoaded', () => {
+  const video = document.getElementById('webcam');
+  const enableWebcamButton = document.getElementById('enableWebcam');
+
+    const canvasElement = document.getElementById('output_canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+    const drawingUtils = new DrawingUtils(canvasCtx);
+    var customText1 = document.getElementById("changetext"); //------------------
+  
+
+  const enableWebcam = async () => {
+    const constraints = {
+      video: true
+    };
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      video.srcObject = stream;
+
+    const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm");
+    const poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+        baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+            delegate: "GPU"
+          },
+          runningMode: "VIDEO",
+          numPoses: 1
+        });
+
+
+
+        let lastLandmarks = [];
+        video.addEventListener('loadeddata', () => {
+
+          let lastRenderTime = 0;
+
+            const renderLandmarks = () => {
+          poseLandmarker.detectForVideo(video, performance.now(), (result) => {
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+
+
+            
+          const smoothedLandmarks = smoothLandmarks(result.landmarks, lastLandmarks, 8);
+            
+          for (const landmark of smoothedLandmarks) {
+            drawingUtils.drawLandmarks(landmark, {
+            radius: function(data) {
+                return DrawingUtils.lerp(data.from && data.from.z !== undefined ? data.from.z : 0, -0.15, 0.1, 5, 1);
+                }
+            });
+
+            
+               drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS);
+              var angle = calculateAngle(landmarks[12], landmarks[14], landmarks[16]);
+              
+              
+              
+               customText1.innerText = angle; // Changes TEXT TO CUSTOM(ANGLE)
+            }
+    });
+
+          requestAnimationFrame(renderLandmarks);
+        };
+
+        renderLandmarks();
+        });
+
+
+    } catch (error) {
+      console.error('Error accessing webcam:', error);
+    }
+  enableWebcam();
+  };
+enableWebcam();
+});
+
+function calculateAngle(point1, point2, point3) {
+  // Convert landmarks to vectors
+  const vector1 = { x: point1.x - point2.x, y: point1.y - point2.y };
+  const vector2 = { x: point3.x - point2.x, y: point3.y - point2.y };
+
+  const dotProduct = vector1.x * vector2.x + vector1.y * vector2.y;
+  const magnitude1 = Math.sqrt(vector1.x ** 2 + vector1.y ** 2);
+  const magnitude2 = Math.sqrt(vector2.x ** 2 + vector2.y ** 2);
+  const cosine = dotProduct / (magnitude1 * magnitude2);
+  const angleRad = Math.acos(cosine);
+  const angleDeg = (angleRad * 180) / Math.PI;
+
+  return angleDeg;
+}
+
+function smoothLandmarks(currentLandmarks, lastLandmarks, factor) {
+      if (lastLandmarks.length === 0) {
+        return currentLandmarks;
+      }
+
+      return currentLandmarks.map((currentPoint, i) => ({
+        x: lerp(lastLandmarks[i].x, currentPoint.x, factor),
+        y: lerp(lastLandmarks[i].y, currentPoint.y, factor),
+        z: lerp(lastLandmarks[i].z, currentPoint.z, factor),
+      }));
+    }
+
+    // Linear interpolation function
+    function lerp(a, b, t) {
+      return a * (1 - t) + b * t;
+    }
+
+    
+
+</script>
+
+</body>
+</html>
